@@ -5,25 +5,29 @@ const pagebits = UInt( log2( pagesize ) )
 
 const residentbit = UInt(1) << 63
 
-function record( pid, file )
+function record( pid, curraddress )
     maps = readlines( "/proc/$pid/maps" )
     parts = [split( map, r" +" ) for map in maps]
     @assert( length(unique(length.(parts))) == 1 )
 
-    part = filter(row -> row[end]==file, parts )
-    @assert( length(part) == 1 )
-
-    (startaddress, endaddress) = parse.( UInt, "0x".*split( part[1][1], "-" ) )
+    namedtuples = NamedTuple[]
+    for i = 1:length(parts)
+        (startaddress, endaddress) = parse.( UInt, "0x".*split( parts[i][1], "-" ) )
+        if startaddress <= curraddress < endaddress
+            push!( namedtuples, (startaddress=startaddress, endaddress=endaddress) )
+        end
+    end
+    @assert( length(namedtuples) == 1 )
     
-    return (startaddress=startaddress, endaddress=endaddress)
+    return namedtuples[1]
 end
 
 page( address ) = address >> pagebits
 
 address( page ) = page << pagebits
 
-function numresidentpages( pid, file )
-    currrecord = record( pid, file )
+function numresidentpages( pid, curraddress )
+    currrecord = record( pid, curraddress )
 
     currpage = page( currrecord.startaddress )
     @assert( currrecord.startaddress & (pagesize - 1) == 0 )

@@ -9,7 +9,7 @@ write( file, x )
 
 y = Mmap.mmap( file, Vector{Float64}, n, 0 )
 
-pages0 = LinuxProc.numresidentpages( getpid(), file )
+pages0 = LinuxProc.numresidentpages( getpid(), UInt(pointer(y)) )
 @assert( pages0.pages == Int(ceil( n*8/LinuxProc.pagesize )) )
 
 @assert( 0.0 <= pages0.resident/pages0.pages <= 0.01 )
@@ -19,7 +19,7 @@ for i = 1:n
     global sum += y[i]
 end
 
-pages1 = LinuxProc.numresidentpages( getpid(), file )
+pages1 = LinuxProc.numresidentpages( getpid(), UInt(pointer(y)) )
 
 @assert( pages1.pages == pages0.pages )
 
