@@ -5,21 +5,27 @@ const pagebits = UInt( log2( pagesize ) )
 
 const residentbit = UInt(1) << 63
 
-function record( pid, curraddress )
-    maps = readlines( "/proc/$pid/maps" )
-    parts = [split( map, r" +" ) for map in maps]
-    @assert( length(unique(length.(parts))) == 1 )
+function parsepagemapline( line )
+    parts = split( line, " " )
+    addresses = split( parts[1], "-" )
+    return (
+        startaddress = parse( UInt, "0x"*addresses[1] ),
+        endaddress = parse( UInt, "0x"*addresses[2] ),
+        file = parts[end],
+    )
+end
 
-    namedtuples = NamedTuple[]
-    for i = 1:length(parts)
-        (startaddress, endaddress) = parse.( UInt, "0x".*split( parts[i][1], "-" ) )
-        if startaddress <= curraddress < endaddress
-            push!( namedtuples, (startaddress=startaddress, endaddress=endaddress) )
+function record( pid, curraddress )
+    records = NamedTuple[]
+    for line in readlines( "/proc/$pid/maps" )
+        record = parsepagemapline( line )
+        if record.startaddress <= curraddress < record.endaddress
+            push!( records, record )
         end
     end
-    @assert( length(namedtuples) == 1 )
+    @assert( length(records) == 1 )
     
-    return namedtuples[1]
+    return records[1]
 end
 
 page( address ) = address >> pagebits
