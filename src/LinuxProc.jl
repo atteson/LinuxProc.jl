@@ -5,24 +5,29 @@ const pagebits = UInt( log2( pagesize ) )
 
 const residentbit = UInt(1) << 63
 
-function parsepagemapline( line )
-    parts = split( line, " " )
-    addresses = split( parts[1], "-" )
-    return (
-        startaddress = parse( UInt, "0x"*addresses[1] ),
-        endaddress = parse( UInt, "0x"*addresses[2] ),
-        file = parts[end],
-    )
+function maps( pid )
+    records = NamedTuple[]
+    lengths = Int[]
+    for line in readlines( "/proc/$pid/maps" )
+        parts = split( line, r" +" )
+        if isempty(lengths)
+            push!( lengths, length(parts) )
+        else
+            @assert( length(parts) == lengths[1] )
+        end
+        addresses = split( parts[1], "-" )
+        push!( records, (
+            startaddress = parse( UInt, "0x"*addresses[1] ),
+            endaddress = parse( UInt, "0x"*addresses[2] ),
+            file = parts[end],
+        )
+               )
+    end
+    return records
 end
 
 function record( pid, curraddress )
-    records = NamedTuple[]
-    for line in readlines( "/proc/$pid/maps" )
-        record = parsepagemapline( line )
-        if record.startaddress <= curraddress < record.endaddress
-            push!( records, record )
-        end
-    end
+    records = filter( map -> map.startaddress <= curraddress < map.endaddress, maps(pid) )
     @assert( length(records) == 1 )
     
     return records[1]
