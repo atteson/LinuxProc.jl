@@ -1,0 +1,7 @@
+name = "LinuxProc"
+uuid = "93cefcb4-a964-11e8-38e3-4dbe8a418af2"
+authors = ["Kevin Atteson <kevin@atteson.com>"]
+version = "0.1.0"
+
+[deps]
+Commas = "acc5c61a-a0db-11e8-1c12-8dfca70fca33"
