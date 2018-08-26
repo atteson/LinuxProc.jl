@@ -6,7 +6,7 @@ const pagebits = UInt( log2( pagesize ) )
 const residentbit = UInt(1) << 63
 
 function maps( pid )
-    records = NamedTuple[]
+    records = (startaddress=UInt[], endaddress=UInt[], file=String[],)
     lengths = Int[]
     for line in readlines( "/proc/$pid/maps" )
         parts = split( line, r" +" )
@@ -16,21 +16,23 @@ function maps( pid )
             @assert( length(parts) == lengths[1] )
         end
         addresses = split( parts[1], "-" )
-        push!( records, (
-            startaddress = parse( UInt, "0x"*addresses[1] ),
-            endaddress = parse( UInt, "0x"*addresses[2] ),
-            file = parts[end],
-        )
-               )
+        push!( records.startaddress, parse( UInt, "0x"*addresses[1] ) )
+        push!( records.endaddress, parse( UInt, "0x"*addresses[2] ) )
+        push!( records.file, parts[end] )
     end
     return records
 end
 
 function record( pid, curraddress )
-    records = filter( map -> map.startaddress <= curraddress < map.endaddress, maps(pid) )
+    maps = LinuxProc.maps(pid)
+    records = filter( i -> maps.startaddress[i] <= curraddress < maps.endaddress[i], 1:length(maps.file) )
     @assert( length(records) == 1 )
-    
-    return records[1]
+
+    return (
+        startaddress = maps.startaddress[records[1]],
+        endaddress = maps.endaddress[records[1]],
+        file = maps.file[records[1]],
+    )
 end
 
 page( address ) = address >> pagebits
